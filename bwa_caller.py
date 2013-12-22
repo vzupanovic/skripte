@@ -2,7 +2,13 @@ import subprocess
 import os
 import numpy as np
 import math
-import matplotlib.pyplot as pltS
+import matplotlib.pyplot as plt
+import analyzer as stats
+import operator
+import matplotlib.ticker as mticker
+from pylab import *
+
+
 class BWACaller():
 	def __init__(self, readType, referenceSequence, sequenceToMap1, sequenceToMap2):
 		self.readType = readType
@@ -12,9 +18,8 @@ class BWACaller():
 		self.cmd1 = "bwa index "+str(self.referenceSequence)
 		self.cmd2 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap1)+" > sequence1.sai"
 		self.cmd3 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap2)+" > sequence2.sai"
-		self.cmd4 = "bwa sampe "+str(self.referenceSequence)+" sequence1.sai sequence2.sai "+str(self.sequenceToMap1)+" "+str(self.sequenceToMap2)+" > out.sam"
-		self.cmd5 = "bwa samse "+str(self.referenceSequence)+" sequence1.sai "+str(self.sequenceToMap1)+" > alignment.sam"
-		#self.cmd6 = "bwa 
+		self.cmd4 = "bwa sampe "+str(self.referenceSequence)+" sequence1.sai sequence2.sai "+str(self.sequenceToMap1)+" "+str(self.sequenceToMap2)+" > alignment.sam"
+		self.cmd5 = "bwa samse "+str(self.referenceSequence)+" sequence1.sai "+str(self.sequenceToMap1)+" > alignment.sam" 
 	def calculateIndex(self):
 		os.system(self.cmd1)
 	def align(self):
@@ -42,52 +47,119 @@ class SAMTools():
 		
 class BEDTools():
 	def __init__(self):
-		self.cmd1 = "~/bedtools/bin/bedtools genomecov -ibam ~/probaj2/test_sorted.bam -d > ~/probaj2/guzica.bam.cov"
+		self.cmd1 = "~/bedtools/bin/bedtools genomecov -ibam ~/celera_test/test_sorted.bam -dz > ~/celera_test/test.bam.cov"
 	def compute(self):
 		os.system(self.cmd1)
 
 class Coverage:
-	def parseInput(self, inputData):
+	def getContigData(self, inputData): #get basic contig info
+		contiger = stats.ContigAnalyzer()
+		self.contigs = []
+		self.contigHeaders = []
+		self.contigLengths = []
+		self.contigs, self.contigHeaders, self.contigLengths = contiger.parseFasta(inputData)
+		self.totalLenCont = contiger.getTotalLength()
+		
+	def getAlignmentData(self, inputData): #get alignment data
 		stream = open(inputData, 'r')
 		data = stream.readlines()
-		counter = 0
-		self.xvalues = np.arange(1, len(data) + 1)
-		self.yvalues = []
-		#print type(self.xvalues)
-		#print self.xvalues
+		alignData = {}
+		self.uncoveredRegions = {}
+		for header in self.contigHeaders:
+			alignData[header] = []
+			self.uncoveredRegions[header] = []
+		print alignData
 		for line in data:
-			temp = []
 			line = line.strip()
+			temp = []
 			temp = line.split("\t")
-			self.yvalues.append(int(temp[-1]))
-			if int(temp[-1]) > 0:
-				counter = counter + 1
-		self.yvalues = np.array(self.yvalues)
-		#print self.yvalues, type(self.yvalues)
-		self.dataLen = len(data)
-		self.counter = counter
-		if (self.dataLen > 0):
-			self.totalAverageCoverage = float(counter) / self.dataLen #each position covered at least once
-		else:
-			self.totalAverageCoverage = 0
-		#print len(data), counter, float(counter)/len(data)
+			covValue = int(temp[-1])
+			header = temp[0]
+			alignData[header].append(covValue)
+		self.alignData = alignData
+		return alignData
 		
-	def outputAverageCoverage(self):
-		print "Genome coverage estimated to: ",self.totalAverageCoverage*100,"%"
+	def getCoveragePerContig(self): #get all covered bases in contig, every base must be covered at least once
+		coverageData = {}
+		self.notCoveredContigs = []
+		self.totalCoverage = 0
+		for header in self.alignData:
+			temp = self.alignData[header] 
+			covered = 0
+			for value in self.alignData[header]:
+				if value > 0:
+					covered += 1
+			if len(temp) > 0:
+				coverage = float(covered) / len(temp)
+				coverageData[header] = coverage
+			else:
+				self.notCoveredContigs.append(header)
+		self.coverageData = coverageData
+		print coverageData
+		print self.notCoveredContigs
+		return coverageData
 		
-	def outputCoveragePerPosition(self):
-		print "Position:\tCoverage:"
-		for i in range(0, len(self.yvalues)):
-			print self.xvalues[i], " => \t", self.yvalues[i]
-	
-	def plotHistogram(self):
-		plt.bar(self.xvalues, self.yvalues, color = 'r')
-		#plt.bar((0,1,2,3,4), (0,1,4,2,0))
-		plt.show()	
-	
+	def getMaxCoveredContigs(self, n): #get contigs with highest number of bases covered
+		sortedContigs = self.sortContigs()
+		return sortedContigs[0:n]
+			
+	def sortContigs(self): #sort contigs by coverage
+		sortedContigs = sorted(self.coverageData.iteritems(), key=operator.itemgetter(1), reverse = True)
+		return sortedContigs
+		
+	def plotCoverage(self, contigId, path, show): #plot coverage of contig
+		currentCovs = self.alignData[contigId]
+		xAxis = np.arange(0, len(currentCovs))
+		yAxis = np.array(currentCovs)
+		plot(xAxis, yAxis, 'ro', markersize=3)
+		xlabel('Relative position inside contig')
+		ylabel('Number of reads')
+		title('Contig coverage')
+		grid(True)
+		savefig(path+"/"+contigId+".png")
+		if show == 1:
+			show()
+		
+	def plotAllContigCov(self, path, show): #plot coverage of all contigs in .fasta file
+		if not os.path.exists(path):
+			os.makedirs(path)
+		for header in self.alignData:
+			if self.alignData[header] != []:
+				self.plotCoverage(header, path, 0)
+			else:
+				print "Skipping contig:"+header+" none of the reads were mapped to it."				
+		
+	def getUncoveredRegions(self): #skip uncovered regions
+		self.totalUncoveredBases = 0
+		for header in self.alignData:
+			temp = self.alignData[header] 
+			for i in range(0, len(temp)):
+				if temp[i] == 0:
+					self.totalUncoveredBases += 1
+					self.uncoveredRegions[header].append(i)
+		print "Percentage of uncovered bases:",float(self.totalUncoveredBases)/self.totalLenCont * 100
+		return self.totalUncoveredBases, float(self.totalUncoveredBases)/self.totalLenCont * 100
+		
+	def getRegionMaxCov(self, contigId): #get regions with highest coverage
+		currentContigCov = self.alignData[contigId]
+		if currentContigCov == []:
+			return 0, None
+		maxCoverage = max(currentContigCov)
+		maxCovPos = [i for i, x in enumerate(currentContigCov) if x == maxCoverage]
+		return maxCoverage, maxCovPos
+		
+	def getPotColapseRegions(self, n): #get potential colapse regions (high coverage)
+		maxCovs = {}
+		for header in self.alignData:
+			maxcov, pos = self.getRegionMaxCov(header)
+			print "Contig ID:",header, "max cov:", maxcov 
+			maxCovs[header] = maxcov
+		sortedCovs = sorted(maxCovs.iteritems(), key=operator.itemgetter(1), reverse = True)
+		return sortedCovs[0:n]
+		
 	
 if __name__ == "__main__":
-	bwa = BWACaller(0, "referenca.fasta", "contigi.fasta", "null")
+	bwa = BWACaller(1, "contigi.fasta", "read1.fastq", "read2.fastq")
 	bwa.calculateIndex()
 	bwa.align()
 	bwa.doSamsa()
@@ -96,8 +168,15 @@ if __name__ == "__main__":
 	bedtools = BEDTools()
 	bedtools.compute()
 	coverage_stats = Coverage()
-	coverage_stats.parseInput("guzica.bam.cov")
-	coverage_stats.outputAverageCoverage()
+	coverage_stats.getContigData("contigi.fasta")
+	coverage_stats.getAlignmentData("test.bam.cov")
+	coverage_stats.getCoveragePerContig()
+	print "najvise", coverage_stats.getMaxCoveredContigs(5)
+	print coverage_stats.getUncoveredRegions()
+	print coverage_stats.getRegionMaxCov("ctg7180000000328")
+	print coverage_stats.getPotColapseRegions(2)
+	coverage_stats.plotAllContigCov("plots", 0)
+
 
 
 			
