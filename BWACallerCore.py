@@ -33,7 +33,7 @@ class CallerCore:
 		self.samtools.execute()
 		
 	def doBAM(self):
-		self.bedtools = BEDTools("~/celera_test/","~/celera_test/")
+		self.bedtools = BEDTools("~/celera_test/","~/celera_test/") #change this !
 		self.bedtools.compute()
 		
 	def doCoverageStats(self):
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 		readType = int(sys.argv[5])	
 		showPlot = int(sys.argv[6])
 		core = CallerCore(readType, read1, read2, contigFile, plotFolder, showPlot)
-		#core.doBWA()
-		#core.doSAM()
+		core.doBWA()
+		core.doSAM()
 		core.doBAM()
 		core.doCoverageStats()
