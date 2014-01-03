@@ -10,36 +10,36 @@ import os.path
 from analyzer import *
 
 class Core():
-	def __init__(self, contigFile, scaffoldFile, qualitiyFile): #initialize analyzers
+	def __init__(self, contigFile, scaffoldFile, qualitiyFile, readLength, thrsSize, chrSize, thrsSizeScaff, chrSizeScaff): #initialize analyzers
 		self.contigFile = contigFile
 		self.scaffoldFile = scaffoldFile
 		self.qualityFile = qualityFile
 		if contigFile != None:
-			self.getContigStats()
+			self.getContigStats(readLength, thrsSize, chrSize)
 			
 		if scaffoldFile != None:
-			self.getScaffoldStats()
+			self.getScaffoldStats(thrsSizeScaff, chrSizeScaff)
 			
 		if scaffoldFile != None and contigFile != None:
 			self.getMixedStats()
 		
-	def getContigStats(self): #get basic statistics for contigs
+	def getContigStats(self, readLength, thrsSize, chrSize): #get basic statistics for contigs
 		self.contiger = ContigAnalyzer()
 		print "\n[AN:] Getting basic statistics for contigs..."
 		contigs, headers, lengths = self.contiger.parseFasta(self.contigFile)
 		totalNum = self.contiger.getNumContigs()
-		biggerThen = self.contiger.getCertainSize(25000)[0] #ulazni
+		biggerThen = self.contiger.getCertainSize(chrSize)[0] #ulazni
 		totalLen = self.contiger.getTotalLength()
 		maxLen = self.contiger.getMaxContigLength()[1]
 		minLen = self.contiger.getMinContigLength()[1]
 		avgLen = self.contiger.getAvgContigLength()
 		medLen = self.contiger.getMedContigLength() 
-		eSize = self.contiger.getEsize(0) #ulazni param
+		eSize = self.contiger.getEsize(thrsSize) #ulazni param
 		n25 = self.contiger.getNX(lengths, 25, self.contiger.getTotalLength())
 		n50 = self.contiger.getNX(lengths, 50, self.contiger.getTotalLength())
 		n56 = self.contiger.getNX(lengths, 56, self.contiger.getTotalLength())
 		n75 = self.contiger.getNX(lengths, 75, self.contiger.getTotalLength())
-		rc = self.contiger.getRatioRC(75) #ulazni param
+		rc = self.contiger.getRatioRC(readLength) #ulazni param
 		EM = self.contiger.getCorrelationEM(eSize, medLen)
 		EN = self.contiger.getCorrelationEN(eSize, n50)
 		print "[AN:] Total number of contigs: ", totalNum
@@ -59,7 +59,7 @@ class Core():
 		print "[AN:] Ratio between contig and read length: ", rc #ulazni param
 		return [totalNum, biggerThen, totalLen, maxLen, minLen, avgLen, medLen, eSize, n25, n50, n56, n75]
 		
-	def getScaffoldStats(self): #get basic statistics for scaffolds
+	def getScaffoldStats(self, thrsSizeScaff, chrSizeScaff): #get basic statistics for scaffolds
 		self.scaffolder = ScaffoldAnalyzer()
 		scalarStats = []
 		print "\n[AN:] Getting basic statistics for scaffolds..."
@@ -69,12 +69,12 @@ class Core():
 		minSize = self.scaffolder.getMinScaff()[1]
 		avgSize = self.scaffolder.getAvgScaff()
 		medSize = self.scaffolder.getMedScaffLength()
-		certainNum = self.scaffolder.getCertainSizeNum(25000)[0] #ulazni
+		certainNum = self.scaffolder.getCertainSizeNum(chrSizeScaff)[0] #ulazni
 		n25 = self.scaffolder.getNX(lengths, 25, totalSize)
 		n50 = self.scaffolder.getNX(lengths, 50, totalSize)
 		n56 = self.scaffolder.getNX(lengths, 56, totalSize)
 		n75 = self.scaffolder.getNX(lengths, 75, totalSize)
-		eSize = self.scaffolder.getEsize(0) #ulazni
+		eSize = self.scaffolder.getEsize(thrsSizeScaff) #ulazni
 		EM = self.scaffolder.getCorrelationEM(eSize, medSize)
 		EN = self.scaffolder.getCorrelationEN(eSize, n50)
 		print "[AN:] Total number of scaffolds: ", totalNum
@@ -117,8 +117,15 @@ class Core():
 				
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
-		print "[AN:] Usage: python analyzer.py path_to_contig_file path_to_scaffold_file[optional] quality_file[optional]"
+		print "[AN:] Usage:\n\tpython analyzer.py path_to_contig_file path_to_scaffold_file[optional] quality_file[optional]"
+		print "\t read_len[default 75] minimum_contig_size[default 0] chromosome_size[default 25000kB]"
+		print "\t minimum_scaffold_size[default 0] chromosome_size_scaffold[default 25000kB]"
 	else:
+		defaultReadLen = 75
+		defaultThrsSize = 0
+		defaultChrSize = 25000
+		defaultThrsSizeScaff = 0
+		defaultChrSizeScaff = 25000
 		if len(sys.argv) == 2:
 			contigFile = sys.argv[1]
 			scaffoldFile = None
@@ -144,5 +151,17 @@ if __name__ == "__main__":
 				if os.path.isfile(sys.argv[3])!=True:
 					print "[AN:] File "+str(sys.argv[3])+" doesn't exist. Exiting..."
 					exit(-1)
+				#print "ovo je duljina", sys.argv
+				if len(sys.argv) >= 5:
+					defaultReadLen = int(sys.argv[4])
+				if len(sys.argv) >= 6:
+					defaultThrsSize = int(sys.argv[5])
+				if len(sys.argv) >= 7:
+					defaultChrSize = int(sys.argv[6])
+				if len(sys.argv) >= 8:
+					defaultThrsSizeScaff = int(sys.argv[7])
+				if len(sys.argv) >= 9:
+					defaultChrSizeScaff = int(sys.argv[8])
 				
-		core = Core(contigFile, scaffFile, qualityFile)
+				
+		core = Core(contigFile, scaffFile, qualityFile, defaultReadLen, defaultThrsSize, defaultChrSize, defaultThrsSizeScaff, defaultChrSizeScaff)
