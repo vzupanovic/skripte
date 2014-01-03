@@ -32,8 +32,8 @@ class CallerCore:
 		self.samtools = SAMTools()
 		self.samtools.execute()
 		
-	def doBAM(self):
-		self.bedtools = BEDTools("~/celera_test/","~/celera_test/") #change this !
+	def doBAM(self, pathToBam, pathToCov):
+		self.bedtools = BEDTools(pathToBam,pathToCov) #change this !
 		self.bedtools.compute()
 		
 	def doCoverageStats(self):
@@ -54,8 +54,9 @@ class CallerCore:
 		
 
 if __name__ == "__main__":
-	if len(sys.argv) < 7:
-		print "[AN:] Usage python BWACallerCore.py read1.fastq read2.fastq[null]\n\tcontig_file.fasta plot_folder read_type[0/1] show_plot[0/1]"
+	if len(sys.argv) < 9:
+		print "[AN:] Usage:\n\tpython BWACallerCore.py read1.fastq read2.fastq[null]\n\tcontig_file.fasta plot_folder read_type[0/1] show_plot[0/1]"
+		print "\tpath_to_bam_file[~/example/] path_to_cov_file[~/example/]" 
 	else:
 		if os.path.isfile(sys.argv[1])!=True:
 			print "[AN:] File "+str(sys.argv[1])+" doesn't exist. Exiting..."
@@ -73,8 +74,10 @@ if __name__ == "__main__":
 		plotFolder = sys.argv[4]
 		readType = int(sys.argv[5])	
 		showPlot = int(sys.argv[6])
+		pathToBam = sys.argv[7]
+		pathToCov = sys.argv[8]
 		core = CallerCore(readType, read1, read2, contigFile, plotFolder, showPlot)
 		core.doBWA()
 		core.doSAM()
-		core.doBAM()
+		core.doBAM(pathToBam, pathToCov)
 		core.doCoverageStats()
