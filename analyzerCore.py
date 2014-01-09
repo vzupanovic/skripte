@@ -10,7 +10,7 @@ import os.path
 from analyzer import *
 
 class Core():
-	def __init__(self, contigFile, scaffoldFile, qualitiyFile, readLength, thrsSize, chrSize, thrsSizeScaff, chrSizeScaff): #initialize analyzers
+	def __init__(self, contigFile, scaffoldFile, qualityFile, readLength, thrsSize, chrSize, thrsSizeScaff, chrSizeScaff): #initialize analyzers
 		self.contigFile = contigFile
 		self.scaffoldFile = scaffoldFile
 		self.qualityFile = qualityFile
@@ -27,6 +27,9 @@ class Core():
 			self.getMixedStats()
 		
 	def getContigStats(self, readLength, thrsSize, chrSize): #get basic statistics for contigs
+		if os.path.isfile(self.contigFile)!=True:
+			print "[AN:] File "+self.contigFile+" doesn't exist. Exiting..."
+			return -1
 		self.contiger = ContigAnalyzer()
 		print "\n[AN:] Getting basic statistics for contigs..."
 		contigs, headers, lengths = self.contiger.parseFasta(self.contigFile)
@@ -46,7 +49,7 @@ class Core():
 		EM = self.contiger.getCorrelationEM(eSize, medLen)
 		EN = self.contiger.getCorrelationEN(eSize, n50)
 		print "[AN:] Total number of contigs: ", totalNum
-		print "[AN:] Number of contigs bigger then size 25kB:", biggerThen
+		print "[AN:] Number of contigs bigger then size"+str(chrSize)+"B:", biggerThen
 		print "[AN:] Total length of all contigs: ",totalLen
 		print "[AN:] Maximum contig size: ", maxLen
 		print "[AN:] Minimum contig size: ", minLen
@@ -63,6 +66,9 @@ class Core():
 		self.contigStats = [totalNum, biggerThen, totalLen, maxLen, minLen, avgLen, medLen, eSize, n25, n50, n56, n75]
 		
 	def getScaffoldStats(self, thrsSizeScaff, chrSizeScaff): #get basic statistics for scaffolds
+		if os.path.isfile(self.scaffoldFile)!=True:
+			print "[AN:] File "+self.scaffoldFile+" doesn't exist. Exiting..."
+			return -1
 		self.scaffolder = ScaffoldAnalyzer()
 		scalarStats = []
 		print "\n[AN:] Getting basic statistics for scaffolds..."
@@ -85,7 +91,7 @@ class Core():
 		print "[AN:] Minimum scaffold size: ", minSize
 		print "[AN:] Average scaffold size: ", avgSize
 		print "[AN:] Median scaffold size: ", medSize
-		print "[AN:] Total number of scaffolds bigger then size 25 kB", certainNum
+		print "[AN:] Total number of scaffolds bigger then size"+str(chrSizeScaff)+"B", certainNum
 		print "[AN:] N25 measure: ", n25
 		print "[AN:] N50 measure: ", n50
 		print "[AN:] N56 measure: ", n56
@@ -106,6 +112,12 @@ class Core():
 		self.scaffoldStats = [totalNum, maxSize, minSize, avgSize, medSize, certainNum, n25, n50, n56, n75, EM, EN, avgs, qual]
 		
 	def getMixedStats(self): #get basic mixed statistics
+		if os.path.isfile(self.scaffoldFile)!=True:
+				print "[AN:] File "+self.scaffoldFile+" doesn't exist. Exiting..."
+				return -1
+		if os.path.isfile(self.contigFile)!=True:
+				print "[AN:] File "+self.contigFile+" doesn't exist. Exiting..."
+				return -1
 		self.comparer = Comparer(self.contigFile, self.scaffoldFile)
 		avgs = self.comparer.compAvgLength()
 		n50s = self.comparer.compN50()
@@ -126,7 +138,7 @@ class Core():
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
 		print "[AN:] Usage:\n\tpython analyzer.py path_to_contig_file path_to_scaffold_file[optional] quality_file[optional]"
-		print "\t read_len[default 75] minimum_contig_size[default 0] chromosome_size[default 25000kB]"
+		print "\t read_len[default 75] minimum_contig_size[default 0] chromosome_size[default 25kB]"
 		print "\t minimum_scaffold_size[default 0] chromosome_size_scaffold[default 25000kB]"
 	else:
 		defaultReadLen = 75
@@ -138,20 +150,12 @@ if __name__ == "__main__":
 			contigFile = sys.argv[1]
 			scaffFile = None
 			qualityFile = None
-			if os.path.isfile(sys.argv[1])!=True:
-				print "[AN:] File "+str(sys.argv[1])+" doesn't exist. Exiting..."
-				exit(-1)
+			
 		else:
 			contigFile = sys.argv[1]
 			scaffFile = sys.argv[2]
 			qualityFile = None
 			
-			if os.path.isfile(sys.argv[1])!=True:
-				print "[AN:] File "+str(sys.argv[1])+" doesn't exist. Exiting..."
-				exit(-1)
-			if os.path.isfile(sys.argv[2])!=True:
-				print "[AN:] File "+str(sys.argv[2])+" doesn't exist. Exiting..."
-				exit(-1)
 				
 			if len(sys.argv) > 3:
 				qualityFile = sys.argv[3]
