@@ -14,6 +14,9 @@ class Core():
 		self.contigFile = contigFile
 		self.scaffoldFile = scaffoldFile
 		self.qualityFile = qualityFile
+		self.contigStats = [-1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1];
+		self.scaffoldStats = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0];
+		self.mixedStats = [-1, -1, -1, -1, -1];
 		if contigFile != None:
 			self.getContigStats(readLength, thrsSize, chrSize)
 			
@@ -57,7 +60,7 @@ class Core():
 		print "[AN:] Ratio between median and E-size: ", EM
 		print "[AN:] Ratio between n50 and E-size: ", EN
 		print "[AN:] Ratio between contig and read length: ", rc #ulazni param
-		return [totalNum, biggerThen, totalLen, maxLen, minLen, avgLen, medLen, eSize, n25, n50, n56, n75]
+		self.contigStats = [totalNum, biggerThen, totalLen, maxLen, minLen, avgLen, medLen, eSize, n25, n50, n56, n75]
 		
 	def getScaffoldStats(self, thrsSizeScaff, chrSizeScaff): #get basic statistics for scaffolds
 		self.scaffolder = ScaffoldAnalyzer()
@@ -91,6 +94,8 @@ class Core():
 		print "[AN:] Ratio between n50 and E-size: ", EN
 		if (self.qualityFile == None):
 			print "[AN:] Quality file not provided. Skipping..."
+			avgs = []
+			qual = -1
 		else:
 			print "[AN:] Average quality stats:"
 			quals = self.scaffolder.parseQual(self.qualityFile)
@@ -98,7 +103,7 @@ class Core():
 			for i in range(0, len(headers)):
 				print "\t Scaffold: ", headers[i], " average quality: ",avgs[i]
 			print "[AN:] Total average quality: ", qual
-		return [totalNum, maxSize, minSize, avgSize, medSize, certainNum, n25, n50, n56, n75, EM, EN, avgs, qual]
+		self.scaffoldStats = [totalNum, maxSize, minSize, avgSize, medSize, certainNum, n25, n50, n56, n75, EM, EN, avgs, qual]
 		
 	def getMixedStats(self): #get basic mixed statistics
 		self.comparer = Comparer(self.contigFile, self.scaffoldFile)
@@ -113,7 +118,10 @@ class Core():
 		print "[AN:] Number of contigs divided by number of scaffolds: ",nums
 		print "[AN:] Total length of contigs divided by total length of scaffolds: ", lens
 		print "[AN:] Maximal length of contig divided by maximal length of scaffold: ",maxs
-		return [avgs, n50s, nums, lens, maxs]
+		self.mixedStats = [avgs, n50s, nums, lens, maxs]
+		
+	def getAllStats(self):
+		return self.contigStats + self.scaffoldStats + self.mixedStats
 				
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
@@ -128,7 +136,7 @@ if __name__ == "__main__":
 		defaultChrSizeScaff = 25000
 		if len(sys.argv) == 2:
 			contigFile = sys.argv[1]
-			scaffoldFile = None
+			scaffFile = None
 			qualityFile = None
 			if os.path.isfile(sys.argv[1])!=True:
 				print "[AN:] File "+str(sys.argv[1])+" doesn't exist. Exiting..."
@@ -145,7 +153,7 @@ if __name__ == "__main__":
 				print "[AN:] File "+str(sys.argv[2])+" doesn't exist. Exiting..."
 				exit(-1)
 				
-			if (sys.argv) > 3:
+			if len(sys.argv) > 3:
 				qualityFile = sys.argv[3]
 				#print "DA"
 				if os.path.isfile(sys.argv[3])!=True:
@@ -165,3 +173,4 @@ if __name__ == "__main__":
 				
 				
 		core = Core(contigFile, scaffFile, qualityFile, defaultReadLen, defaultThrsSize, defaultChrSize, defaultThrsSizeScaff, defaultChrSizeScaff)
+		print core.getAllStats()
