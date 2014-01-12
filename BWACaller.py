@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import subprocess
 import os
 import numpy as np
@@ -7,19 +8,21 @@ import analyzer as stats
 import operator
 import matplotlib.ticker as mticker
 from pylab import *
+import time
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 class BWACaller():
-	def __init__(self, readType, referenceSequence, sequenceToMap1, sequenceToMap2):
+	def __init__(self, readType, referenceSequence, sequenceToMap1, sequenceToMap2, regularPath):
 		self.readType = readType
 		self.referenceSequence = referenceSequence
 		self.sequenceToMap1 = sequenceToMap1
 		self.sequenceToMap2 = sequenceToMap2
 		self.cmd1 = "bwa index "+str(self.referenceSequence)
-		self.cmd2 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap1)+" > sequence1.sai"
-		self.cmd3 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap2)+" > sequence2.sai"
-		self.cmd4 = "bwa sampe "+str(self.referenceSequence)+" sequence1.sai sequence2.sai "+str(self.sequenceToMap1)+" "+str(self.sequenceToMap2)+" > alignment.sam"
-		self.cmd5 = "bwa samse "+str(self.referenceSequence)+" sequence1.sai "+str(self.sequenceToMap1)+" > alignment.sam" 
+		self.cmd2 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap1)+" > "+regularPath+"sequence1.sai"
+		self.cmd3 = "bwa aln "+str(self.referenceSequence)+" "+str(self.sequenceToMap2)+" > "+regularPath+"sequence2.sai"
+		self.cmd4 = "bwa sampe "+str(self.referenceSequence)+" "+regularPath+"sequence1.sai "+regularPath+"sequence2.sai "+str(self.sequenceToMap1)+" "+str(self.sequenceToMap2)+" > "+regularPath+"alignment.sam"
+		self.cmd5 = "bwa samse "+str(self.referenceSequence)+" " +regularPath+"sequence1.sai "+str(self.sequenceToMap1)+" > alignment.sam" 
 	def calculateIndex(self):
 		os.system(self.cmd1)
 	def align(self):
@@ -34,11 +37,11 @@ class BWACaller():
 		os.system(self.cmd5)
 		
 class SAMTools():
-	def __init__(self):
-		self.cmd1 = "samtools view -bS alignment.sam | samtools sort - test_sorted"
-		self.cmd2 = "samtools index test_sorted.bam test_sorted.bai"
-		self.cmd3 = "samtools idxstats test_sorted.bam > analyze.txt"
-		self.cmd4 = "samtools flagstat test_sorted.bam"
+	def __init__(self, regularPath):
+		self.cmd1 = "samtools view -bS "+regularPath+"alignment.sam | samtools sort - test_sorted"
+		self.cmd2 = "samtools index "+regularPath+"test_sorted.bam "+regularPath+"test_sorted.bai"
+		self.cmd3 = "samtools idxstats "+regularPath+"test_sorted.bam > "+regularPath+"analyze.txt"
+		self.cmd4 = "samtools flagstat "+regularPath+"test_sorted.bam"
 	def execute(self):
 		os.system(self.cmd1)
 		os.system(self.cmd2)
@@ -46,8 +49,9 @@ class SAMTools():
 		os.system(self.cmd4)
 		
 class BEDTools():
-	def __init__(self, pathToBam, pathToCov): #dodaj da ima path!
-		self.cmd1 = "~/bedtools/bin/bedtools genomecov -ibam "+pathToBam+"test_sorted.bam -dz > "+pathToCov+"test.bam.cov"
+	def __init__(self, regularPath, pathToBedTools): #dodaj da ima path!
+		#self.pathToBedTools = "~/bedtools/bin/bedtools"
+		self.cmd1 = pathToBedTools+" genomecov -ibam "+regularPath+"test_sorted.bam -dz > "+regularPath+"test.bam.cov"
 	def compute(self):
 		os.system(self.cmd1)
 
@@ -126,11 +130,13 @@ class Coverage:
 		plot(xAxis, yAxis, 'ro', markersize=3)
 		xlabel('Relative position inside contig')
 		ylabel('Number of reads')
-		title('Contig coverage')
+		title('Contig coverage['+contigId+']')
 		grid(True)
 		savefig(path+"/"+contigId+".png")
 		if showMe == 1:
 			show()
+		else:
+			time.sleep(1)
 		
 	def plotAllContigCov(self, path, show): #plot coverage of all contigs in .fasta file
 		if not os.path.exists(path):

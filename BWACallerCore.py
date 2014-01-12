@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import subprocess
 import os
 import numpy as np
@@ -11,6 +12,7 @@ from BWACaller import *
 
 class CallerCore:
 	def __init__(self, readType, readFile_1, readFile_2, contigFile, plotPath, showPlot):
+		self.maxCovReg = [-1,-1,-1,-1]
 		self.readType = readType
 		self.readFile_1 = readFile_1
 		self.readFile_2 = readFile_2
@@ -18,8 +20,8 @@ class CallerCore:
 		self.plotPath = plotPath
 		self.showPlot = showPlot
 		
-	def doBWA(self):
-		self.bwa = BWACaller(self.readType, self.contigFile, self.readFile_1, self.readFile_2)
+	def doBWA(self, regularPath):
+		self.bwa = BWACaller(self.readType, self.contigFile, self.readFile_1, self.readFile_2, regularPath)
 		self.bwa.calculateIndex()
 		self.bwa.align()
 		if self.readType == 1:
@@ -27,22 +29,23 @@ class CallerCore:
 		else:
 			self.bwa.doSampe()
 		
-	def doSAM(self):
+	def doSAM(self, regularPath):
 		print "[AN:] Getting basic alignment stats..."
-		self.samtools = SAMTools()
+		self.samtools = SAMTools(regularPath)
 		self.samtools.execute()
 		
-	def doBAM(self, pathToBam, pathToCov):
-		self.bedtools = BEDTools(pathToBam,pathToCov) #change this !
+	def doBAM(self, regularPath, pathToBedTools):
+		self.bedtools = BEDTools(regularPath, pathToBedTools) #change this !
 		self.bedtools.compute()
 		
-	def doCoverageStats(self):
+	def doCoverageStats(self, regularPath):
 		print "[AN:] Getting basic coverage stats..."
 		coverage_stats = Coverage()
 		coverage_stats.getContigData(self.contigFile)
-		coverage_stats.getAlignmentData("test.bam.cov")
+		coverage_stats.getAlignmentData(regularPath+"test.bam.cov")
 		coverage_stats.getCoveragePerContig()
-		potCollaps = coverage_stats.getPotColapseRegions(2)
+		potCollaps = coverage_stats.getPotColapseRegions(4)
+		self.maxCovReg = potCollaps[:]
 		print "[AN:] Potential colapse regions because of high coverage:"
 		for contig in potCollaps:
 			print "\tContig ID:",contig[0],"\tcoverage:",contig[1]
@@ -50,13 +53,16 @@ class CallerCore:
 		coverage_stats.plotAllContigCov(self.plotPath, self.showPlot)
 		print "[AN:] Done..."
 		
+	def getAllStats(self):
+		return self.maxCovReg
+		
 
 		
 
 if __name__ == "__main__":
 	if len(sys.argv) < 9:
 		print "[AN:] Usage:\n\tpython BWACallerCore.py read1.fastq read2.fastq[null]\n\tcontig_file.fasta plot_folder read_type[0/1] show_plot[0/1]"
-		print "\tpath_to_bam_file[~/example/] path_to_cov_file[~/example/]" 
+		print "\tpath_to_data_folder[~/example/] path_to_BEDTOOLS[~/bedtools/bin/bedtools]" 
 	else:
 		if os.path.isfile(sys.argv[1])!=True:
 			print "[AN:] File "+str(sys.argv[1])+" doesn't exist. Exiting..."
@@ -74,10 +80,12 @@ if __name__ == "__main__":
 		plotFolder = sys.argv[4]
 		readType = int(sys.argv[5])	
 		showPlot = int(sys.argv[6])
-		pathToBam = sys.argv[7]
-		pathToCov = sys.argv[8]
+		regularPath = sys.argv[7]
+		pathToBedTools = sys.argv[8]
+		#regularPath = "/home/lexy/BWA_test/"
 		core = CallerCore(readType, read1, read2, contigFile, plotFolder, showPlot)
-		core.doBWA()
-		core.doSAM()
-		core.doBAM(pathToBam, pathToCov)
-		core.doCoverageStats()
+		core.doBWA(regularPath)
+		core.doSAM(regularPath)
+		core.doBAM(regularPath, pathToBedTools)
+		core.doCoverageStats(regularPath)
+		print core.getAllStats()
