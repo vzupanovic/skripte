@@ -45,7 +45,7 @@ Output:
     
 BWACallerCore.py
 BWACallerCore.py read1.fastq read2.fastq contigFile.fasta folder_for_plots flag1 flag2 regularPath pathToBedtools
-flag1 - type of reads
+flag1 - type of reads (0-single end/1-paired-end)
 flag2 - show plot (0/1)
 regularPath - path to save files
 Output:
