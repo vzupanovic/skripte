@@ -2,11 +2,14 @@ import subprocess
 import os
 import sys
 import os.path
+import re
 
 class Mummer:
 	def __init__(self, genomeFile, contigFile):
 		self.genomeFile = genomeFile
 		self.contigFile = contigFile
+		self.refErrors = [-1,-1,-1,-1]
+		self.qryErrors = [-1,-1,-1,-1]
 		self.cmd1 = "nucmer -maxmatch -c 100 -p nucmer "+self.genomeFile+" "+self.contigFile
 		self.cmd2 = "show-coords -r -c -l nucmer.delta > nucmer.coords"
 		self.cmd3 = "show-snps -C nucmer.delta > nucmer.snps"
@@ -30,10 +33,38 @@ class Mummer:
 		
 	def printBasicMummerStats(self):
 		stream = open('out.report', 'r')
-		data = stream.readlines()
-		for line in data:
+		self.data = stream.readlines()
+		for line in self.data:
 			line = line.strip()
 			print line
+			
+	def getErrors(self):
+		for line in self.data:
+			line = line.strip()
+			line = "\t".join(line.split())
+			if ("Breakpoints" in line):
+				print '\t'+line
+				temp = line.split("\t")
+				self.refErrors[0] = temp[1]
+				self.qryErrors[0] = temp[2]
+			elif ("Relocations" in line):
+				print '\t'+line
+				temp = line.split("\t")
+				self.refErrors[1] = temp[1]
+				self.qryErrors[1] = temp[2]
+			elif ("Translocations" in line):
+				print '\t'+line
+				temp = line.split("\t")
+				self.refErrors[2] = temp[1]
+				self.qryErrors[2] = temp[2]
+			elif ("Inversions" in line):
+				print '\t'+line
+				temp = line.split("\t")
+				self.refErrors[3] = temp[1]
+				self.qryErrors[3] = temp[2]
+				
+	def getAllStats(self):
+		return self.refErrors + self.qryErrors
 			
 		
 if __name__ == "__main__":
@@ -53,7 +84,10 @@ if __name__ == "__main__":
 		mummer.getFeatures()
 		print "[AN:] Printing basic stats..."
 		mummer.printBasicMummerStats()
+		print "[AN:] Getting the number of breakpoints, relocations, translocations and inversions (errors)[REF/QRY]...\n"
+		mummer.getErrors()
 		print "[AN:] Plotting..."
 		mummer.doPlot()
+		print mummer.getAllStats()
 		
 	
