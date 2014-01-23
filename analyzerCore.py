@@ -7,7 +7,9 @@ from Bio.Blast import NCBIXML
 import math
 import sys
 import os.path
+import os
 from analyzer import *
+from fastaFileChecker import *
 
 class Core():
 	def __init__(self, contigFile, scaffoldFile, qualityFile, readLength, thrsSize, chrSize, thrsSizeScaff, chrSizeScaff): #initialize analyzers
@@ -18,13 +20,16 @@ class Core():
 		self.scaffoldStats = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0];
 		self.mixedStats = [-1, -1, -1, -1, -1];
 		if contigFile != None:
-			self.getContigStats(readLength, thrsSize, chrSize)
+			if os.stat(contigFile)[6]!= 0 and checkFile(contigFile) == 1:
+				self.getContigStats(readLength, thrsSize, chrSize)
 			
 		if scaffoldFile != None:
-			self.getScaffoldStats(thrsSizeScaff, chrSizeScaff)
+			if os.stat(scaffoldFile)[6]!=0 and checkFile(contigFile) == 1:
+				self.getScaffoldStats(thrsSizeScaff, chrSizeScaff)
 			
 		if scaffoldFile != None and contigFile != None:
-			self.getMixedStats()
+			if os.stat(scaffoldFile)[6]!=0 and os.stat(contigFile)[6]!=0 and checkFile(contigFile) == 1 and checkFile(scaffoldFile) == 1:
+				self.getMixedStats()
 		
 	def getContigStats(self, readLength, thrsSize, chrSize): #get basic statistics for contigs
 		if os.path.isfile(self.contigFile)!=True:
@@ -49,7 +54,7 @@ class Core():
 		EM = self.contiger.getCorrelationEM(eSize, medLen)
 		EN = self.contiger.getCorrelationEN(eSize, n50)
 		print "[AN:] Total number of contigs: ", totalNum
-		print "[AN:] Number of contigs bigger then size"+str(chrSize)+"B:", biggerThen
+		print "[AN:] Number of contigs bigger then size "+str(chrSize)+"B: ", biggerThen
 		print "[AN:] Total length of all contigs: ",totalLen
 		print "[AN:] Maximum contig size: ", maxLen
 		print "[AN:] Minimum contig size: ", minLen
@@ -91,7 +96,7 @@ class Core():
 		print "[AN:] Minimum scaffold size: ", minSize
 		print "[AN:] Average scaffold size: ", avgSize
 		print "[AN:] Median scaffold size: ", medSize
-		print "[AN:] Total number of scaffolds bigger then size"+str(chrSizeScaff)+"B", certainNum
+		print "[AN:] Total number of scaffolds bigger then size "+str(chrSizeScaff)+"B: ", certainNum
 		print "[AN:] N25 measure: ", n25
 		print "[AN:] N50 measure: ", n50
 		print "[AN:] N56 measure: ", n56
