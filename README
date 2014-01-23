@@ -1,1 +1,62 @@
-Ovdje neke random razne skripte, nisu još gotove.
+Random skripte za testiranje assemblera:
+
+Način korištenja:
+
+analyzerCore.py
+python analyzerCore.py contigFile.fasta scaffoldFile.fasta[optional] qualityFile.fasta[optional]
+Output:
+    Stats for contigs/scaffolds:
+    
+		Total number of scaffolds/contigs
+		Maximum scaffold/contig size
+		Minimum scaffold/contig size
+		Average scaffold/contig size
+		Median scaffold/contig size
+		Total number of scaffolds/contigs bigger then size n
+		N25 measure
+		N50 measure
+		N56 measure
+		N75 measure
+		Ratio between median and E-size
+		Ratio between n50 and E-size
+		
+		*average quality stats (scaffolds only)
+		*ratio between contig and read length(contigs only)
+		
+		Mixed stats:
+		
+		Average scaffold length divied by average contig length
+		N50 of contigs divided by N50 of scaffolds
+		Number of contigs divided by number of scaffolds
+		Total length of contigs divided by total length of scaffolds
+		Maximal length of contig divided by maximal length of scaffold
+		
+
+MUMMERCallerCore.py
+python MUMMERCaller.py genomeFile.fasta contigFile.fasta
+Output:
+    Number of errors:
+      -breakpoints
+      -relocations
+      -translocations
+      -inversions
+    
+    *Mummerplot - mapiranje contiga na referentni genom
+    
+BWACallerCore.py
+BWACallerCore.py read1.fastq read2.fastq contigFile.fasta folder_for_plots flag1 flag2 regularPath pathToBedtools
+flag1 - type of reads (0-single end/1-paired-end)
+flag2 - show plot (0/1)
+regularPath - path to save files
+Output:
+    - Alignment stats
+    - Basic coverage stats
+    - Reads per contig (plots)
+    
+    
+		
+		
+		
+		
+
+
