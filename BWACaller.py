@@ -10,6 +10,7 @@ import matplotlib.ticker as mticker
 from pylab import *
 import time
 from matplotlib.backends.backend_pdf import PdfPages
+import pickle
 
 
 class BWACaller():
@@ -141,6 +142,7 @@ class Coverage:
 	def plotAllContigCov(self, path, show): #plot coverage of all contigs in .fasta file
 		if not os.path.exists(path):
 			os.makedirs(path)
+		pickle.dump(self.alignData, open(path+"/data.p","wb"))
 		for header in self.alignData:
 			if self.alignData[header] != []:
 				print "Plotting:", header
